@@ -1,0 +1,19 @@
+HELP.md
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### VS Code ###
+.vscode/
+
+### Sensitive Data ###
+src/main/resources/application.properties
+
+### Heroku ###
+target/
+target
+.settings/
+.mvn/
