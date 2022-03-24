@@ -1,6 +1,7 @@
 package ito.dsos.microservicios.controller;
 
 import ito.dsos.microservicios.model.RegistroModel;
+import ito.dsos.microservicios.repository.RegistroRepository;
 import ito.dsos.microservicios.service.RegistroService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -17,6 +18,9 @@ public class RegistroController {
 
     @Autowired
     private RegistroService registroService;
+
+    @Autowired
+    private RegistroRepository registroRepository;
 
     @GetMapping("/")
     public List<RegistroModel> getAll(){
@@ -66,11 +70,20 @@ public class RegistroController {
     public ResponseEntity<HashMap<String, Object>> nuevoRegistro(@ModelAttribute RegistroModel registro){
         //RESPUESTA CUSTOM
         HashMap<String,Object> response=new HashMap<>();
+        Boolean existe = false;
 
+        //VERIFICA SI REGISTRO EXISTE, SI SÍ, TOMA VALORES DEL EXISTENTE
+        if (registroRepository.existsById(registro.getNumControl())) {
+            existe = true;
+            int ID = registro.getNumControl();
+            registro = registroRepository.getById(ID);
+        }
+
+        //VALIDACIÓN DEL REGISTRO NUEVO
         if(registro == null){
          response.put("ERROR","POST NULO");
          return new ResponseEntity<>(response, HttpStatus.NO_CONTENT);
-        } else if(registro.getGenero() == null){
+        } else if(registro.getGenero() == null || !(registro.getGenero()=='M' ||registro.getGenero()=='H')){
             response.put("ERROR","El género debe ser 'M' o 'H' únicamente");
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         } else if(registro.getMedidaCintura()==null || registro.getMedidaAltura()==null || registro.getMedidaAltura()==0 || registro.getMedidaCintura()==0){
@@ -108,6 +121,12 @@ public class RegistroController {
 
             response.put("nivel",nivel);
         }
+
+        //SI EXISTE: REGRESA EL CÁLCULO
+        if (existe){
+            return new ResponseEntity<>(response, HttpStatus.FOUND);
+        }
+        //SI NO EXISTE: REGRESA EL CÁLCULO Y CREA EL REGISTRO
         registroService.createRegistro(registro);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
