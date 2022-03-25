@@ -15,6 +15,8 @@ public interface RegistroService {
 
     public void createRegistro(RegistroModel nuevoRegistro);
 
+    public Boolean existeNumControl(Integer id);
+
     public void save(RegistroModel nuevoRegistro);
 
     public void delete(Integer id);

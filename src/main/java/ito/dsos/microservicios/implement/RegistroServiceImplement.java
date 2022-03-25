@@ -30,13 +30,19 @@ public class RegistroServiceImplement implements RegistroService {
         this.registroRepository = registroRepository;
     }
 
-    public void save(RegistroModel nuevaRegistro){
-        registroRepository.save(nuevaRegistro);
+    public void save(RegistroModel nuevoRegistro){
+        registroRepository.save(nuevoRegistro);
     }
 
     public void delete(Integer id){
         registroRepository.deleteById(id);
     }
+
+    @Override
+    public Boolean existeNumControl(Integer id){
+        return registroRepository.existsById(id);
+    }
+
 
     @Override
     public void update(RegistroModel compraUpdate, Integer id){

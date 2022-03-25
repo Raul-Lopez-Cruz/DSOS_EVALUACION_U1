@@ -27,6 +27,7 @@ public class RegistroController {
         return registroService.getAll();
     }
 
+    //Método no utilizado: mala interpretación de las instrucciones
     @GetMapping("/{id}")
     public ResponseEntity<HashMap<String, Object>> getOne(@PathVariable String id){
         Optional<RegistroModel> registro = registroService.getById(Integer.parseInt(id));
@@ -66,68 +67,96 @@ public class RegistroController {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
+
     @PostMapping("/")
     public ResponseEntity<HashMap<String, Object>> nuevoRegistro(@ModelAttribute RegistroModel registro){
-        //RESPUESTA CUSTOM
+        //DATOS
+        Double [][] arrValores = {{0.34,0.34},{0.42,0.41},{0.52,0.48},{0.57,0.53},{0.62,0.57},{0.63,0.58}};
+        //VARIABLES
         HashMap<String,Object> response=new HashMap<>();
-        Boolean existe = false;
-
+        boolean existe = false;
+        boolean datosCompletos = true;
         //VERIFICA SI REGISTRO EXISTE, SI SÍ, TOMA VALORES DEL EXISTENTE
         if (registroRepository.existsById(registro.getNumControl())) {
             existe = true;
             int ID = registro.getNumControl();
-            registro = registroRepository.getById(ID);
+            RegistroModel viejoRegistro = registroRepository.getById(ID);
+            if (viejoRegistro.getGenero()==null){
+                viejoRegistro.setGenero(registro.getGenero());
+            }
+            if (viejoRegistro.getMedidaAltura()==null){
+                viejoRegistro.setMedidaAltura(registro.getMedidaAltura());
+            }
+            if (viejoRegistro.getMedidaCintura()==null){
+                viejoRegistro.setMedidaCintura(registro.getMedidaCintura());
+            }
+            registro = viejoRegistro; //Utiliza los valores del viejo y nuevo registro
         }
-
         //VALIDACIÓN DEL REGISTRO NUEVO
-        if(registro == null){
-         response.put("ERROR","POST NULO");
+        if(registro.getNumControl()==null){
+         response.put("error","Se requiere de un número de control");
          return new ResponseEntity<>(response, HttpStatus.NO_CONTENT);
-        } else if(registro.getGenero() == null || !(registro.getGenero()=='M' ||registro.getGenero()=='H')){
-            response.put("ERROR","El género debe ser 'M' o 'H' únicamente");
-            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
-        } else if(registro.getMedidaCintura()==null || registro.getMedidaAltura()==null || registro.getMedidaAltura()==0 || registro.getMedidaCintura()==0){
-            response.put("ERROR","Medidas vacías o iguales a cero");
-            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+        //VERIFICAR QUE SE CUENTA CON LOS DATOS PARA CALCULAR EL ICA
+        if(registro.getGenero() == null){
+            datosCompletos=false;
+        }else if (!(registro.getGenero()=='M' ||registro.getGenero()=='H')){
+            datosCompletos=false;
+            response.put("error","El género no ha sido guardado: debe ser H o M");
+            registro.setGenero(null);
+        }
+        if(registro.getMedidaCintura()==null || registro.getMedidaAltura()==null){
+            datosCompletos=false;
+        }else{
+            if (registro.getMedidaAltura()==0){
+                datosCompletos=false;
+                response.put("error","La medida de altura no ha sido guardada: no puede ser igual a 0");
+                registro.setMedidaAltura(null);
+            }
+            if (registro.getMedidaCintura()==0){
+                datosCompletos=false;
+                response.put("error","La medida de cintura no ha sido guardada: no puede ser igual a 0");
+                registro.setMedidaCintura(null);
+            }
         }
 
-        //DATOS ICA
-        Double [][] arrValores = {{0.34,0.34},{0.42,0.41},{0.52,0.48},{0.57,0.53},{0.62,0.57},{0.63,0.58}};
+        //SI NO HAY DATOS COMPLETOS:
+        if (!datosCompletos){
+            registroService.createRegistro(registro); //Guarda el registro
+            response.put("ica","no se puede calcular");
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        }
         //CALCULAR ICA
         if (registro.getMedidaCintura()!=null && registro.getMedidaAltura()!=null){
-            double ICA = registro.getMedidaCintura()/registro.getMedidaAltura();
+            double ICA = Math.round((registro.getMedidaCintura()/registro.getMedidaAltura())*100.0)/100.0;
             response.put("ica",ICA);
             int sexo;
             String nivel="";
-
-                if (registro.getGenero().charValue()=='H')
+                if (registro.getGenero() =='H')
                     sexo = 0;
                 else
                     sexo = 1;
-
-                if (ICA < arrValores[0][sexo]){
+                if (ICA <= arrValores[0][sexo]){
                     nivel="Delgadez severa";
-                }else if (ICA>=arrValores[1][sexo] && ICA<arrValores[2][sexo]){
+                }else if (ICA>arrValores[0][sexo] && ICA<=arrValores[1][sexo]){
                     nivel="Delgadez leve";
-                }else if (ICA>=arrValores[2][sexo]&& ICA<arrValores[3][sexo]){
+                }else if (ICA>arrValores[1][sexo]&& ICA<=arrValores[2][sexo]){
                     nivel="Peso normal";
-                }else if (ICA>=arrValores[3][sexo]&& ICA<arrValores[4][sexo]){
+                }else if (ICA>arrValores[2][sexo]&& ICA<=arrValores[3][sexo]){
                     nivel="Sobrepeso";
-                }else if (ICA>=arrValores[4][sexo]&& ICA<arrValores[5][sexo]){
+                }else if (ICA>arrValores[3][sexo]&& ICA<=arrValores[4][sexo]){
                     nivel="Sobrepeso elevado";
-                }else if (ICA>=arrValores[5][sexo]) {
+                }else if (ICA>arrValores[4][sexo]) {
                     nivel = "Obesidad mórbida";
                 }
-
             response.put("nivel",nivel);
         }
-
-        //SI EXISTE: REGRESA EL CÁLCULO
+        registroService.createRegistro(registro);
+        //SI EL REGISTRO EXISTÍA: HttpStatus = FOUND
         if (existe){
             return new ResponseEntity<>(response, HttpStatus.FOUND);
         }
-        //SI NO EXISTE: REGRESA EL CÁLCULO Y CREA EL REGISTRO
-        registroService.createRegistro(registro);
+        //SI EL REGISTRO NO EXISTÍA: HttpStatus = CREATED
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 }
