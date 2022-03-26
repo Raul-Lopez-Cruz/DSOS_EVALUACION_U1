@@ -81,15 +81,22 @@ public class RegistroController {
             existe = true;
             int ID = registro.getNumControl();
             RegistroModel viejoRegistro = registroRepository.getById(ID);
-            if (viejoRegistro.getGenero()==null){
-                viejoRegistro.setGenero(registro.getGenero());
+            if (registro.getGenero()==null && registro.getMedidaAltura()==null && registro.getMedidaCintura()==null){
+
+            }else{
+                if (viejoRegistro.getGenero()==null){
+                    viejoRegistro.setGenero(registro.getGenero());
+                }
+                if (viejoRegistro.getMedidaAltura()==null){
+                    viejoRegistro.setMedidaAltura(registro.getMedidaAltura());
+                }
+                if (viejoRegistro.getMedidaCintura()==null){
+                    viejoRegistro.setMedidaCintura(registro.getMedidaCintura());
+                }
+                datosCompletos=false;
             }
-            if (viejoRegistro.getMedidaAltura()==null){
-                viejoRegistro.setMedidaAltura(registro.getMedidaAltura());
-            }
-            if (viejoRegistro.getMedidaCintura()==null){
-                viejoRegistro.setMedidaCintura(registro.getMedidaCintura());
-            }
+            
+
             registro = viejoRegistro; //Utiliza los valores del viejo y nuevo registro
         }
         //VALIDACIÓN DEL REGISTRO NUEVO
